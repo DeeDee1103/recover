@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       case "invoice.payment_failed":
         await handlePaymentFailed(supabase, event);
         break;
-      case "invoice.payment_succeeded":
+      case "invoice.paid":
         await handlePaymentSucceeded(supabase, event);
         break;
       default:
