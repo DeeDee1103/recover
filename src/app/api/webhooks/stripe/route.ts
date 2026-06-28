@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   // Mark as processed before handling (at-most-once)
   const { error: insertError } = await supabase
     .from("processed_stripe_events")
-    .insert({ event_id: event.id, type: event.type, processed_at: new Date().toISOString() });
+    .insert({ event_id: event.id, event_type: event.type, processed_at: new Date().toISOString() });
 
   if (insertError) {
     // Unique constraint violation = concurrent duplicate
