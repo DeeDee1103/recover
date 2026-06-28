@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe/client";
+import { getStripe } from "@/lib/stripe/client";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await stripe.oauth.token({
+    const response = await getStripe().oauth.token({
       grant_type: "authorization_code",
       code,
     });
