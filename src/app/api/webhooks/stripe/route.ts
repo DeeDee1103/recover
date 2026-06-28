@@ -75,27 +75,12 @@ async function handlePaymentFailed(
   event: Stripe.Event
 ) {
   const invoice = event.data.object as Stripe.Invoice;
-  const stripeAccountId = event.account;
 
-  if (!stripeAccountId) {
-    console.error("No account ID on event — not a Connect event");
+  const merchantId = await resolveMerchant(supabase, event.account);
+  if (!merchantId) {
+    console.error(`No merchant found for account ${event.account || "(direct)"}`);
     return;
   }
-
-  // Look up merchant via stripe_connections
-  const { data: connection } = await supabase
-    .from("stripe_connections")
-    .select("merchant_id")
-    .eq("stripe_account_id", stripeAccountId)
-    .eq("status", "active")
-    .single();
-
-  if (!connection) {
-    console.error(`No active connection for Stripe account ${stripeAccountId}`);
-    return;
-  }
-
-  const merchantId = connection.merchant_id;
   const customerId = invoice.customer as string;
   const customerEmail = invoice.customer_email;
   const customerName = invoice.customer_name;
@@ -172,25 +157,16 @@ async function handlePaymentSucceeded(
   event: Stripe.Event
 ) {
   const invoice = event.data.object as Stripe.Invoice;
-  const stripeAccountId = event.account;
 
-  if (!stripeAccountId) return;
-
-  const { data: connection } = await supabase
-    .from("stripe_connections")
-    .select("merchant_id")
-    .eq("stripe_account_id", stripeAccountId)
-    .eq("status", "active")
-    .single();
-
-  if (!connection) return;
+  const merchantId = await resolveMerchant(supabase, event.account);
+  if (!merchantId) return;
 
   // Find matching failed_payment
   const { data: failedPayment } = await supabase
     .from("failed_payments")
     .select("id, amount")
     .eq("stripe_invoice_id", invoice.id)
-    .eq("merchant_id", connection.merchant_id)
+    .eq("merchant_id", merchantId)
     .in("status", ["open", "recovering"])
     .single();
 
@@ -215,11 +191,36 @@ async function handlePaymentSucceeded(
       name: "payment/recovered",
       data: {
         failed_payment_id: failedPayment.id,
-        merchant_id: connection.merchant_id,
+        merchant_id: merchantId,
         stripe_invoice_id: invoice.id,
       },
     });
   } catch (err) {
     console.error("Failed to emit recovery Inngest event:", err);
   }
+}
+
+async function resolveMerchant(
+  supabase: ReturnType<typeof createServiceClient>,
+  stripeAccountId?: string
+): Promise<string | null> {
+  if (stripeAccountId) {
+    const { data } = await supabase
+      .from("stripe_connections")
+      .select("merchant_id")
+      .eq("stripe_account_id", stripeAccountId)
+      .eq("status", "active")
+      .single();
+    return data?.merchant_id || null;
+  }
+
+  // Direct event (restricted key) — find merchant with a restricted_key connection
+  const { data } = await supabase
+    .from("stripe_connections")
+    .select("merchant_id")
+    .eq("connection_method", "restricted_key")
+    .eq("status", "active")
+    .limit(1)
+    .single();
+  return data?.merchant_id || null;
 }
