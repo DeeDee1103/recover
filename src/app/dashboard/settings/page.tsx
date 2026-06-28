@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { ConnectButton } from "./connect-button";
 import { RestrictedKeyForm } from "./restricted-key-form";
+import { ToneSelector } from "./tone-selector";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export default async function SettingsPage() {
   const serviceClient = createServiceClient();
   const { data: merchant } = await serviceClient
     .from("merchants")
-    .select("id")
+    .select("id, tone")
     .eq("auth_user_id", user!.id)
     .single();
 
@@ -82,6 +83,18 @@ export default async function SettingsPage() {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="mt-8 max-w-lg">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          AI Email Tone
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Choose the tone for AI-generated reminder emails. The AI personalizes each email based on the customer and payment context.
+        </p>
+        <div className="mt-4">
+          <ToneSelector currentTone={merchant?.tone || "professional"} />
+        </div>
       </section>
     </div>
   );

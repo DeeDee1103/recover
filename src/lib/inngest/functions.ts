@@ -1,6 +1,7 @@
 import { inngest } from "./client";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getResend } from "@/lib/resend/client";
+import { generateReminderCopy } from "@/lib/anthropic/generate-copy";
 
 export const reminderSequence = inngest.createFunction(
   {
@@ -56,7 +57,7 @@ export const reminderSequence = inngest.createFunction(
 
       const { data: merchant } = await supabase
         .from("merchants")
-        .select("company_name")
+        .select("company_name, tone")
         .eq("id", merchant_id)
         .single();
 
@@ -71,6 +72,7 @@ export const reminderSequence = inngest.createFunction(
         payment,
         customer: payment.end_customers,
         merchantName: merchant?.company_name || "Our Team",
+        tone: merchant?.tone || "professional",
         stripeAccountId: connection?.stripe_account_id,
       };
     });
@@ -132,23 +134,45 @@ export const reminderSequence = inngest.createFunction(
         const amount = formatAmount(context.payment.amount, context.payment.currency);
         const updateUrl = buildUpdateUrl(context.stripeAccountId, context.customer?.stripe_customer_id);
 
-        const body = renderTemplate(seqStep.body_template, {
-          customer_name: context.customer?.name || "there",
-          amount,
-          currency: context.payment.currency.toUpperCase(),
-          update_url: updateUrl,
-          company_name: context.merchantName,
-        });
+        let subject: string;
+        let body: string;
+        let usedAi = false;
+
+        try {
+          const aiCopy = await generateReminderCopy({
+            customerName: context.customer?.name || "there",
+            amount,
+            currency: context.payment.currency.toUpperCase(),
+            companyName: context.merchantName,
+            tone: context.tone,
+            stepNumber: seqStep.step_order,
+            totalSteps: steps.length,
+            updateUrl,
+          });
+          subject = aiCopy.subject;
+          body = aiCopy.body;
+          usedAi = true;
+        } catch (aiErr) {
+          console.warn(`AI copy failed for step ${seqStep.step_order}, using template:`, aiErr);
+          subject = renderTemplate(seqStep.subject, {
+            customer_name: context.customer?.name || "there",
+            amount,
+            currency: context.payment.currency.toUpperCase(),
+          });
+          body = renderTemplate(seqStep.body_template, {
+            customer_name: context.customer?.name || "there",
+            amount,
+            currency: context.payment.currency.toUpperCase(),
+            update_url: updateUrl,
+            company_name: context.merchantName,
+          });
+        }
 
         try {
           const { data: emailResult } = await resend.emails.send({
             from: `${context.merchantName} <recover@updates.recover-app.com>`,
             to: [customerEmail],
-            subject: renderTemplate(seqStep.subject, {
-              customer_name: context.customer?.name || "there",
-              amount,
-              currency: context.payment.currency.toUpperCase(),
-            }),
+            subject,
             html: buildEmailHtml(body, updateUrl, context.merchantName),
           });
 
@@ -162,7 +186,7 @@ export const reminderSequence = inngest.createFunction(
             provider_message_id: emailResult?.id || null,
           });
 
-          return { sent: true, message_id: emailResult?.id };
+          return { sent: true, message_id: emailResult?.id, ai_generated: usedAi };
         } catch (err) {
           console.error(`Failed to send step ${seqStep.step_order}:`, err);
 
