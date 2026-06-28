@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
+import { encrypt } from "@/lib/crypto/encrypt";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const testStripe = new Stripe(api_key, {
       apiVersion: "2026-06-24.dahlia",
     });
-    const balance = await testStripe.balance.retrieve();
+    await testStripe.balance.retrieve();
     const account = { id: `acct_restricted_${user.id.slice(0, 8)}` };
 
     const serviceClient = createServiceClient();
@@ -36,11 +37,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Merchant not found" }, { status: 404 });
     }
 
+    const encryptedKey = encrypt(api_key);
+
     await serviceClient.from("stripe_connections").upsert(
       {
         merchant_id: merchant.id,
         stripe_account_id: account.id,
         connection_method: "restricted_key",
+        encrypted_api_key: encryptedKey,
         status: "active",
       },
       { onConflict: "merchant_id" }
