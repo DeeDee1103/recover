@@ -1,0 +1,225 @@
+import { Stripe } from "@/lib/stripe/client";
+import { createServiceClient } from "@/lib/supabase/server";
+import { inngest } from "@/lib/inngest/client";
+import { NextResponse } from "next/server";
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  const signature = request.headers.get("stripe-signature");
+
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+  try {
+    event = Stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  const supabase = createServiceClient();
+
+  // Idempotency check
+  const { data: existing } = await supabase
+    .from("processed_stripe_events")
+    .select("event_id")
+    .eq("event_id", event.id)
+    .single();
+
+  if (existing) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
+  // Mark as processed before handling (at-most-once)
+  const { error: insertError } = await supabase
+    .from("processed_stripe_events")
+    .insert({ event_id: event.id, type: event.type, processed_at: new Date().toISOString() });
+
+  if (insertError) {
+    // Unique constraint violation = concurrent duplicate
+    if (insertError.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    console.error("Failed to record event:", insertError);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  // Route by event type
+  try {
+    switch (event.type) {
+      case "invoice.payment_failed":
+        await handlePaymentFailed(supabase, event);
+        break;
+      case "invoice.payment_succeeded":
+        await handlePaymentSucceeded(supabase, event);
+        break;
+      default:
+        break;
+    }
+  } catch (err) {
+    console.error(`Error handling ${event.type}:`, err);
+    // Still return 200 — we recorded the event, don't want Stripe to retry
+  }
+
+  return NextResponse.json({ received: true });
+}
+
+async function handlePaymentFailed(
+  supabase: ReturnType<typeof createServiceClient>,
+  event: Stripe.Event
+) {
+  const invoice = event.data.object as Stripe.Invoice;
+  const stripeAccountId = event.account;
+
+  if (!stripeAccountId) {
+    console.error("No account ID on event — not a Connect event");
+    return;
+  }
+
+  // Look up merchant via stripe_connections
+  const { data: connection } = await supabase
+    .from("stripe_connections")
+    .select("merchant_id")
+    .eq("stripe_account_id", stripeAccountId)
+    .eq("status", "active")
+    .single();
+
+  if (!connection) {
+    console.error(`No active connection for Stripe account ${stripeAccountId}`);
+    return;
+  }
+
+  const merchantId = connection.merchant_id;
+  const customerId = invoice.customer as string;
+  const customerEmail = invoice.customer_email;
+  const customerName = invoice.customer_name;
+
+  // Upsert end_customer
+  const { data: endCustomer } = await supabase
+    .from("end_customers")
+    .upsert(
+      {
+        merchant_id: merchantId,
+        stripe_customer_id: customerId,
+        email: customerEmail || null,
+        name: customerName || null,
+      },
+      { onConflict: "merchant_id,stripe_customer_id" }
+    )
+    .select("id")
+    .single();
+
+  if (!endCustomer) {
+    console.error("Failed to upsert end_customer");
+    return;
+  }
+
+  // Check if we already have this failed payment
+  const { data: existingPayment } = await supabase
+    .from("failed_payments")
+    .select("id")
+    .eq("stripe_invoice_id", invoice.id)
+    .eq("merchant_id", merchantId)
+    .single();
+
+  if (existingPayment) return;
+
+  // Create failed_payment record
+  const { data: failedPayment, error } = await supabase
+    .from("failed_payments")
+    .insert({
+      merchant_id: merchantId,
+      stripe_invoice_id: invoice.id,
+      stripe_charge_id: (invoice as any).charge as string || null,
+      end_customer_id: endCustomer.id,
+      amount: invoice.amount_due,
+      currency: invoice.currency,
+      failure_reason: invoice.last_finalization_error?.message || null,
+      failed_at: new Date((invoice.created || 0) * 1000).toISOString(),
+      status: "open",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Failed to create failed_payment:", error);
+    return;
+  }
+
+  // Emit Inngest event for M3 sequence
+  try {
+    await inngest.send({
+      name: "payment/failed",
+      data: {
+        failed_payment_id: failedPayment!.id,
+        merchant_id: merchantId,
+        stripe_invoice_id: invoice.id,
+      },
+    });
+  } catch (err) {
+    console.error("Failed to emit Inngest event:", err);
+  }
+}
+
+async function handlePaymentSucceeded(
+  supabase: ReturnType<typeof createServiceClient>,
+  event: Stripe.Event
+) {
+  const invoice = event.data.object as Stripe.Invoice;
+  const stripeAccountId = event.account;
+
+  if (!stripeAccountId) return;
+
+  const { data: connection } = await supabase
+    .from("stripe_connections")
+    .select("merchant_id")
+    .eq("stripe_account_id", stripeAccountId)
+    .eq("status", "active")
+    .single();
+
+  if (!connection) return;
+
+  // Find matching failed_payment
+  const { data: failedPayment } = await supabase
+    .from("failed_payments")
+    .select("id, amount")
+    .eq("stripe_invoice_id", invoice.id)
+    .eq("merchant_id", connection.merchant_id)
+    .in("status", ["open", "recovering"])
+    .single();
+
+  if (!failedPayment) return;
+
+  // Mark as recovered
+  await supabase
+    .from("failed_payments")
+    .update({ status: "recovered", updated_at: new Date().toISOString() })
+    .eq("id", failedPayment.id);
+
+  // Write recovery record
+  await supabase.from("recoveries").insert({
+    failed_payment_id: failedPayment.id,
+    recovered_at: new Date().toISOString(),
+    amount_recovered: invoice.amount_paid || failedPayment.amount,
+  });
+
+  // Emit Inngest event to cancel pending reminders (M3)
+  try {
+    await inngest.send({
+      name: "payment/recovered",
+      data: {
+        failed_payment_id: failedPayment.id,
+        merchant_id: connection.merchant_id,
+        stripe_invoice_id: invoice.id,
+      },
+    });
+  } catch (err) {
+    console.error("Failed to emit recovery Inngest event:", err);
+  }
+}
