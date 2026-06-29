@@ -64,11 +64,22 @@ Respond in exactly this JSON format:
     ],
   });
 
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "";
-  const parsed = JSON.parse(text);
+  const textBlock = msg.content?.[0];
+  const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
+
+  if (!text) {
+    throw new Error("AI returned empty response");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`AI returned invalid JSON: ${text.slice(0, 100)}`);
+  }
 
   if (!parsed.subject || !parsed.body) {
-    throw new Error("Invalid AI response format");
+    throw new Error("AI response missing subject or body");
   }
 
   return { subject: parsed.subject, body: parsed.body };

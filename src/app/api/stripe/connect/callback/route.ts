@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe/client";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  let stateData: { user_id: string };
+  let stateData: { user_id: string; nonce?: string };
   try {
     stateData = JSON.parse(Buffer.from(state, "base64url").toString());
   } catch {
@@ -33,6 +34,12 @@ export async function GET(request: Request) {
 
   if (stateData.user_id !== user.id) {
     return NextResponse.redirect(`${origin}/dashboard/settings?error=state_mismatch`);
+  }
+
+  const cookieStore = await cookies();
+  const savedNonce = cookieStore.get("stripe_oauth_nonce")?.value;
+  if (!savedNonce || savedNonce !== stateData.nonce) {
+    return NextResponse.redirect(`${origin}/dashboard/settings?error=invalid_state`);
   }
 
   try {

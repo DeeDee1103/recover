@@ -1,13 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { SequenceEditor } from "./sequence-editor";
 
 export default async function SequencesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const serviceClient = createServiceClient();
-  const { data: merchant } = await serviceClient
+  const { data: merchant } = await supabase
     .from("merchants")
     .select("id")
     .eq("auth_user_id", user!.id)
@@ -17,7 +15,7 @@ export default async function SequencesPage() {
     return <div className="text-zinc-500">Setting up your account...</div>;
   }
 
-  const { data: sequences } = await serviceClient
+  const { data: sequences } = await supabase
     .from("sequences")
     .select("id, name, is_active")
     .eq("merchant_id", merchant.id)
@@ -25,15 +23,14 @@ export default async function SequencesPage() {
 
   const activeSequence = sequences?.find((s) => s.is_active) || sequences?.[0];
 
-  let steps: any[] = [];
-  if (activeSequence) {
-    const { data } = await serviceClient
-      .from("sequence_steps")
-      .select("*")
-      .eq("sequence_id", activeSequence.id)
-      .order("step_order", { ascending: true });
-    steps = data || [];
-  }
+  const steps = activeSequence
+    ? (await supabase
+        .from("sequence_steps")
+        .select("id, step_order, offset_hours, subject, body_template, channel")
+        .eq("sequence_id", activeSequence.id)
+        .order("step_order", { ascending: true })
+      ).data || []
+    : [];
 
   return (
     <div>

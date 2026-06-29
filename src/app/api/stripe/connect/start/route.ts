@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 export async function GET() {
   const supabase = await createClient();
@@ -17,7 +18,8 @@ export async function GET() {
     );
   }
 
-  const state = Buffer.from(JSON.stringify({ user_id: user.id })).toString("base64url");
+  const nonce = randomUUID();
+  const state = Buffer.from(JSON.stringify({ user_id: user.id, nonce })).toString("base64url");
   const redirectUri = `${process.env.APP_URL}/api/stripe/connect/callback`;
 
   const params = new URLSearchParams({
@@ -28,7 +30,17 @@ export async function GET() {
     state,
   });
 
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     `https://connect.stripe.com/oauth/authorize?${params.toString()}`
   );
+
+  response.cookies.set("stripe_oauth_nonce", nonce, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 600,
+    path: "/api/stripe/connect/callback",
+  });
+
+  return response;
 }

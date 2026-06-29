@@ -1,13 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { formatCents } from "@/lib/format";
+import { StatusBadge } from "./status-badge";
 import Link from "next/link";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const serviceClient = createServiceClient();
-  const { data: merchant } = await serviceClient
+  const { data: merchant } = await supabase
     .from("merchants")
     .select("id, company_name")
     .eq("auth_user_id", user!.id)
@@ -17,34 +17,39 @@ export default async function DashboardPage() {
     return <div className="text-zinc-500">Setting up your account...</div>;
   }
 
-  const { data: connection } = await serviceClient
+  const { data: connection } = await supabase
     .from("stripe_connections")
     .select("stripe_account_id, connection_method, status")
     .eq("merchant_id", merchant.id)
     .eq("status", "active")
     .single();
 
-  // Metrics
-  const { data: allPayments } = await serviceClient
-    .from("failed_payments")
-    .select("id, status, amount, currency")
-    .eq("merchant_id", merchant.id);
+  // Metrics via targeted counts (no fetch-all)
+  const [
+    { count: totalFailed },
+    { count: recoveredCount },
+    { count: openCount },
+  ] = await Promise.all([
+    supabase.from("failed_payments").select("*", { count: "exact", head: true }).eq("merchant_id", merchant.id),
+    supabase.from("failed_payments").select("*", { count: "exact", head: true }).eq("merchant_id", merchant.id).eq("status", "recovered"),
+    supabase.from("failed_payments").select("*", { count: "exact", head: true }).eq("merchant_id", merchant.id).in("status", ["open", "recovering"]),
+  ]);
 
-  const { data: recoveries } = await serviceClient
+  const { data: recoveries } = await supabase
     .from("recoveries")
-    .select("amount_recovered, failed_payment_id")
+    .select("amount_recovered")
     .in(
       "failed_payment_id",
-      (allPayments || []).map((p) => p.id)
+      (await supabase.from("failed_payments").select("id").eq("merchant_id", merchant.id)).data?.map((p) => p.id) || []
     );
 
-  const totalFailed = allPayments?.length || 0;
-  const recoveredCount = allPayments?.filter((p) => p.status === "recovered").length || 0;
-  const openCount = allPayments?.filter((p) => p.status === "open" || p.status === "recovering").length || 0;
+  const total = totalFailed || 0;
+  const recovered = recoveredCount || 0;
+  const open = openCount || 0;
   const totalRecovered = (recoveries || []).reduce((sum, r) => sum + r.amount_recovered, 0);
-  const recoveryRate = totalFailed > 0 ? Math.round((recoveredCount / totalFailed) * 100) : 0;
+  const recoveryRate = total > 0 ? Math.round((recovered / total) * 100) : 0;
 
-  const { data: recentPayments } = await serviceClient
+  const { data: recentPayments } = await supabase
     .from("failed_payments")
     .select("id, amount, currency, status, failed_at, end_customers(email, name)")
     .eq("merchant_id", merchant.id)
@@ -75,8 +80,8 @@ export default async function DashboardPage() {
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
         <MetricCard label="Recovered" value={formatCents(totalRecovered)} />
         <MetricCard label="Recovery rate" value={`${recoveryRate}%`} />
-        <MetricCard label="Open failures" value={String(openCount)} />
-        <MetricCard label="Total failed" value={String(totalFailed)} />
+        <MetricCard label="Open failures" value={String(open)} />
+        <MetricCard label="Total failed" value={String(total)} />
       </div>
 
       {connection && (
@@ -113,7 +118,7 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentPayments.map((p: any) => (
+                {recentPayments.map((p) => (
                   <tr key={p.id} className="border-b border-zinc-100 dark:border-zinc-800">
                     <td className="py-3 text-zinc-900 dark:text-zinc-100">
                       {p.end_customers?.name || p.end_customers?.email || "Unknown"}
@@ -147,23 +152,3 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    open: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-    recovering: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-    recovered: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-    lost: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-  };
-  return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${styles[status] || styles.open}`}>
-      {status}
-    </span>
-  );
-}
-
-function formatCents(cents: number, currency = "usd"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(cents / 100);
-}

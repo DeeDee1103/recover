@@ -2,6 +2,7 @@ import { inngest } from "./client";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getResend } from "@/lib/resend/client";
 import { generateReminderCopy } from "@/lib/anthropic/generate-copy";
+import { formatAmount, buildUpdateUrl, renderTemplate, buildEmailHtml } from "./helpers";
 
 export const reminderSequence = inngest.createFunction(
   {
@@ -74,6 +75,7 @@ export const reminderSequence = inngest.createFunction(
         merchantName: merchant?.company_name || "Our Team",
         tone: merchant?.tone || "professional",
         stripeAccountId: connection?.stripe_account_id,
+        stripeInvoiceId: payment.stripe_invoice_id,
       };
     });
 
@@ -132,7 +134,7 @@ export const reminderSequence = inngest.createFunction(
         }
 
         const amount = formatAmount(context.payment.amount, context.payment.currency);
-        const updateUrl = buildUpdateUrl(context.stripeAccountId, context.customer?.stripe_customer_id);
+        const updateUrl = buildUpdateUrl(context.stripeInvoiceId);
 
         let subject: string;
         let body: string;
@@ -207,49 +209,3 @@ export const reminderSequence = inngest.createFunction(
   }
 );
 
-function formatAmount(amountCents: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(amountCents / 100);
-}
-
-function buildUpdateUrl(stripeAccountId?: string, customerId?: string): string {
-  if (stripeAccountId && customerId) {
-    return `https://billing.stripe.com/p/login/${stripeAccountId}`;
-  }
-  return "#";
-}
-
-function renderTemplate(template: string, vars: Record<string, string>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] || "");
-}
-
-function buildEmailHtml(body: string, updateUrl: string, companyName: string): string {
-  const bodyHtml = body
-    .split("\n")
-    .map((line) => (line.trim() === "" ? "<br/>" : `<p style="margin:0 0 12px;color:#333;font-size:16px;line-height:1.5;">${line}</p>`))
-    .join("");
-
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"/></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-    <div style="background:#112E2A;padding:24px 32px;">
-      <span style="color:#C5862F;font-weight:700;font-size:20px;">${companyName}</span>
-    </div>
-    <div style="padding:32px;">
-      ${bodyHtml}
-      <div style="margin:28px 0;">
-        <a href="${updateUrl}" style="display:inline-block;background:#C5862F;color:#fff;font-weight:700;font-size:16px;padding:14px 28px;border-radius:8px;text-decoration:none;">Update payment method</a>
-      </div>
-      <p style="margin:24px 0 0;font-size:13px;color:#888;">
-        If you've already updated your payment method, please disregard this email.
-      </p>
-    </div>
-  </div>
-</body>
-</html>`;
-}

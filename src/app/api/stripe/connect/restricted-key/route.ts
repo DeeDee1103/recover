@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { encrypt } from "@/lib/crypto/encrypt";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -12,7 +13,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { api_key } = await request.json();
+  const { success: allowed } = rateLimit(`restricted-key:${user.id}`, 5, 60_000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const { api_key } = body;
 
   if (!api_key || typeof api_key !== "string") {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
@@ -23,7 +36,17 @@ export async function POST(request: Request) {
       apiVersion: "2026-06-24.dahlia",
     });
     await testStripe.balance.retrieve();
-    const account = { id: `acct_restricted_${user.id.slice(0, 8)}` };
+    let stripeAccountId: string;
+    try {
+      // Restricted keys with account read permission can retrieve their own account
+      const acct = await testStripe.accounts.retrieve("me" as string);
+      stripeAccountId = acct.id;
+    } catch {
+      // If account read is not permitted, derive a deterministic ID from the key
+      // This is a fallback — merchants should grant account read permission
+      const keyHash = api_key.slice(-8);
+      stripeAccountId = `acct_rk_${user.id.slice(0, 8)}_${keyHash}`;
+    }
 
     const serviceClient = createServiceClient();
 
@@ -42,15 +65,15 @@ export async function POST(request: Request) {
     await serviceClient.from("stripe_connections").upsert(
       {
         merchant_id: merchant.id,
-        stripe_account_id: account.id,
+        stripe_account_id: stripeAccountId,
         connection_method: "restricted_key",
-        encrypted_api_key: encryptedKey,
+        restricted_key_encrypted: encryptedKey,
         status: "active",
       },
       { onConflict: "merchant_id" }
     );
 
-    return NextResponse.json({ success: true, account_id: account.id });
+    return NextResponse.json({ success: true, account_id: stripeAccountId });
   } catch (err) {
     console.error("Restricted key validation error:", err);
     return NextResponse.json(

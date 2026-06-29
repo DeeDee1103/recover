@@ -7,6 +7,9 @@ const TAG_LENGTH = 16;
 function getEncryptionKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) throw new Error("ENCRYPTION_KEY env var is not set");
+  if (!/^[0-9a-fA-F]{64}$/.test(key)) {
+    throw new Error("ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)");
+  }
   return Buffer.from(key, "hex");
 }
 
@@ -27,7 +30,7 @@ export function decrypt(ciphertext: string): string {
   const key = getEncryptionKey();
   const [ivHex, tagHex, encryptedHex] = ciphertext.split(":");
 
-  if (!ivHex || !tagHex || !encryptedHex) {
+  if (ivHex === undefined || tagHex === undefined || encryptedHex === undefined) {
     throw new Error("Invalid ciphertext format");
   }
 

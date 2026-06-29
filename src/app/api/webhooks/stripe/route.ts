@@ -2,8 +2,15 @@ import { Stripe } from "@/lib/stripe/client";
 import { createServiceClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { success: allowed } = rateLimit(`webhook:${ip}`, 100, 60_000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
@@ -121,7 +128,7 @@ async function handlePaymentFailed(
     .insert({
       merchant_id: merchantId,
       stripe_invoice_id: invoice.id,
-      stripe_charge_id: (invoice as any).charge as string || null,
+      stripe_charge_id: ((invoice as unknown as Record<string, unknown>).charge as string) || null,
       end_customer_id: endCustomer.id,
       amount: invoice.amount_due,
       currency: invoice.currency,
@@ -214,13 +221,22 @@ async function resolveMerchant(
     return data?.merchant_id || null;
   }
 
-  // Direct event (restricted key) — find merchant with a restricted_key connection
-  const { data } = await supabase
+  // Direct event (no event.account) — only resolve if exactly one restricted-key merchant exists
+  const { data, count } = await supabase
     .from("stripe_connections")
-    .select("merchant_id")
+    .select("merchant_id", { count: "exact" })
     .eq("connection_method", "restricted_key")
-    .eq("status", "active")
-    .limit(1)
-    .single();
-  return data?.merchant_id || null;
+    .eq("status", "active");
+
+  if (!data || count === 0) return null;
+
+  if (count && count > 1) {
+    console.error(
+      `Ambiguous webhook: ${count} restricted-key merchants found. ` +
+      `Cannot attribute event without event.account. Skipping.`
+    );
+    return null;
+  }
+
+  return data[0]?.merchant_id || null;
 }

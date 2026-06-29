@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { ConnectButton } from "./connect-button";
 import { RestrictedKeyForm } from "./restricted-key-form";
 import { ToneSelector } from "./tone-selector";
@@ -8,15 +7,14 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const serviceClient = createServiceClient();
-  const { data: merchant } = await serviceClient
+  const { data: merchant } = await supabase
     .from("merchants")
     .select("id, tone")
     .eq("auth_user_id", user!.id)
     .single();
 
   const { data: connection } = merchant
-    ? await serviceClient
+    ? await supabase
         .from("stripe_connections")
         .select("stripe_account_id, connection_method, status")
         .eq("merchant_id", merchant.id)
