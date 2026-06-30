@@ -12,7 +12,14 @@ interface Step {
   channel: string;
 }
 
-export function SequenceEditor({ sequenceId, initialSteps }: { sequenceId: string; initialSteps: Step[] }) {
+interface SequenceEditorProps {
+  sequenceId: string;
+  initialSteps: Step[];
+  primaryColor: string;
+  accentColor: string;
+}
+
+export function SequenceEditor({ sequenceId, initialSteps, primaryColor, accentColor }: SequenceEditorProps) {
   const [steps, setSteps] = useState(initialSteps);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -51,14 +58,17 @@ export function SequenceEditor({ sequenceId, initialSteps }: { sequenceId: strin
       {steps.map((step, i) => (
         <div
           key={step.id}
-          className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+          className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          <div
+            style={{ background: primaryColor }}
+            className="flex items-center justify-between px-5 py-3"
+          >
+            <h3 className="text-sm font-semibold text-white">
               Step {step.step_order}
             </h3>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs text-white/70">
                 Send after
               </label>
               <input
@@ -66,13 +76,13 @@ export function SequenceEditor({ sequenceId, initialSteps }: { sequenceId: strin
                 min={0}
                 value={step.offset_hours}
                 onChange={(e) => updateStep(i, "offset_hours", parseInt(e.target.value) || 0)}
-                className="w-16 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                className="w-16 rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white placeholder:text-white/50"
               />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">hours</span>
+              <span className="text-xs text-white/70">hours</span>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 p-5">
             <div>
               <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
                 Subject
@@ -107,7 +117,8 @@ export function SequenceEditor({ sequenceId, initialSteps }: { sequenceId: strin
         <button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+          style={{ background: accentColor }}
+          className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>

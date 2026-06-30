@@ -7,7 +7,7 @@ export default async function SequencesPage() {
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id")
+    .select("id, primary_color, accent_color")
     .eq("auth_user_id", user!.id)
     .single();
 
@@ -56,7 +56,12 @@ export default async function SequencesPage() {
             </span>
           </div>
 
-          <SequenceEditor sequenceId={activeSequence.id} initialSteps={steps} />
+          <SequenceEditor
+            sequenceId={activeSequence.id}
+            initialSteps={steps}
+            primaryColor={merchant.primary_color || "#112E2A"}
+            accentColor={merchant.accent_color || "#C5862F"}
+          />
         </div>
       ) : (
         <p className="mt-6 text-sm text-zinc-500">No sequence found. One should have been created on signup.</p>
