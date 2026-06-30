@@ -3,12 +3,43 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
+const TONES = [
+  { value: "professional", label: "Professional", description: "Business-appropriate, respectful, clear about urgency" },
+  { value: "friendly", label: "Friendly", description: "Warm, conversational, like a helpful friend" },
+  { value: "urgent", label: "Urgent", description: "Direct, action-needed, without being aggressive" },
+  { value: "empathetic", label: "Empathetic", description: "Understanding, acknowledges payment issues happen" },
+] as const;
+
+const SAMPLE_EMAILS: Record<string, { greeting: string; body: string; closing: string }> = {
+  professional: {
+    greeting: "Dear Sarah,",
+    body: "We're writing to inform you that your recent payment of $49.99 USD was unsuccessful. This may be due to an expired card, insufficient funds, or a temporary bank hold.",
+    closing: "Please update your payment method at your earliest convenience using the link below.",
+  },
+  friendly: {
+    greeting: "Hey Sarah! 👋",
+    body: "Just a quick heads-up — your payment of $49.99 USD didn't go through. No worries, these things happen! It could be an expired card or a temporary hiccup with your bank.",
+    closing: "You can sort it out in just a sec by clicking the button below. Easy peasy!",
+  },
+  urgent: {
+    greeting: "Hi Sarah,",
+    body: "Your payment of $49.99 USD has failed. To avoid any service interruption, please update your payment method as soon as possible.",
+    closing: "Click below to resolve this now — it only takes a moment.",
+  },
+  empathetic: {
+    greeting: "Hi Sarah,",
+    body: "We understand that payment issues can be frustrating, and we want to make this as easy as possible for you. Your recent payment of $49.99 USD wasn't able to be processed — this can happen for many reasons and is nothing to worry about.",
+    closing: "Whenever you have a moment, you can update your payment details using the button below. We're here if you need any help.",
+  },
+};
+
 interface BrandingEditorProps {
   companyName: string;
   logoUrl: string | null;
   primaryColor: string;
   accentColor: string;
   emailFooterText: string;
+  currentTone: string;
 }
 
 export function BrandingEditor({
@@ -17,12 +48,14 @@ export function BrandingEditor({
   primaryColor: initialPrimary,
   accentColor: initialAccent,
   emailFooterText: initialFooter,
+  currentTone: initialTone,
 }: BrandingEditorProps) {
   const [companyName, setCompanyName] = useState(initialName);
   const [primaryColor, setPrimaryColor] = useState(initialPrimary);
   const [accentColor, setAccentColor] = useState(initialAccent);
   const [emailFooterText, setEmailFooterText] = useState(initialFooter);
   const [logoUrl, setLogoUrl] = useState(initialLogo);
+  const [tone, setTone] = useState(initialTone);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -34,7 +67,10 @@ export function BrandingEditor({
     companyName !== initialName ||
     primaryColor !== initialPrimary ||
     accentColor !== initialAccent ||
-    emailFooterText !== initialFooter;
+    emailFooterText !== initialFooter ||
+    tone !== initialTone;
+
+  const sampleEmail = SAMPLE_EMAILS[tone] || SAMPLE_EMAILS.professional;
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -72,19 +108,33 @@ export function BrandingEditor({
     setSaving(true);
     setError(null);
 
-    const res = await fetch("/api/settings/branding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company_name: companyName, primary_color: primaryColor, accent_color: accentColor, email_footer_text: emailFooterText }),
-    });
+    const results = await Promise.all([
+      fetch("/api/settings/branding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_name: companyName, primary_color: primaryColor, accent_color: accentColor, email_footer_text: emailFooterText }),
+      }),
+      tone !== initialTone
+        ? fetch("/api/settings/tone", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tone }),
+          })
+        : Promise.resolve({ ok: true } as Response),
+    ]);
 
-    if (res.ok) {
+    if (results.every((r) => r.ok)) {
       setSaved(true);
       router.refresh();
       setTimeout(() => setSaved(false), 2000);
     } else {
-      const data = await res.json();
-      setError(data.error || "Failed to save");
+      const failedRes = results.find((r) => !r.ok);
+      if (failedRes && "json" in failedRes) {
+        const data = await failedRes.json();
+        setError(data.error || "Failed to save");
+      } else {
+        setError("Failed to save");
+      }
     }
     setSaving(false);
   }
@@ -199,6 +249,29 @@ export function BrandingEditor({
         </div>
       </div>
 
+      {/* Tone selector */}
+      <div>
+        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-2">
+          Email tone
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {TONES.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => { setTone(t.value); setSaved(false); }}
+              className={`rounded-lg border p-3 text-left transition-colors ${
+                tone === t.value
+                  ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950"
+                  : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600"
+              }`}
+            >
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{t.label}</p>
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{t.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Full email preview */}
       <div>
         <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-2">
@@ -221,15 +294,13 @@ export function BrandingEditor({
             {/* Email body */}
             <div className="px-8 py-8">
               <p className="mb-3 text-base leading-relaxed text-gray-700">
-                Hi Sarah,
+                {sampleEmail.greeting}
               </p>
               <p className="mb-3 text-base leading-relaxed text-gray-700">
-                We noticed your recent payment of <strong>$49.99 USD</strong> didn&apos;t go through.
-                This can happen for a number of reasons — expired card, insufficient funds,
-                or a temporary bank hold.
+                {sampleEmail.body}
               </p>
               <p className="mb-3 text-base leading-relaxed text-gray-700">
-                You can update your payment method using the button below. It only takes a moment.
+                {sampleEmail.closing}
               </p>
 
               {/* CTA button */}
@@ -287,7 +358,7 @@ export function BrandingEditor({
             disabled={saving}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save branding"}
+            {saving ? "Saving…" : "Save changes"}
           </button>
           {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved!</span>}
         </div>
