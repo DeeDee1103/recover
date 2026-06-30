@@ -58,7 +58,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 style={{ color: "var(--brand-text)" }} className="text-2xl font-bold">
         Dashboard
       </h1>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -94,10 +94,10 @@ export default async function DashboardPage() {
 
       <div className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 style={{ color: "var(--brand-text)" }} className="text-lg font-semibold">
             Recent failed payments
           </h2>
-          <Link href="/dashboard/payments" className="text-sm text-indigo-600 hover:text-indigo-500">
+          <Link href="/dashboard/payments" style={{ color: "var(--brand-accent)" }} className="text-sm hover:opacity-80">
             View all →
           </Link>
         </div>
@@ -110,11 +110,11 @@ export default async function DashboardPage() {
           <div className="mt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-700">
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Customer</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Amount</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Status</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Failed</th>
+                <tr style={{ borderColor: "var(--brand-primary)" }} className="border-b-2">
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Customer</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Amount</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Status</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Failed</th>
                 </tr>
               </thead>
               <tbody>
@@ -145,10 +145,12 @@ export default async function DashboardPage() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
-      <p className="mt-1 text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{value}</p>
+    <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <div style={{ background: "var(--brand-primary)" }} className="h-1" />
+      <div className="p-4 sm:p-5">
+        <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
+        <p style={{ color: "var(--brand-text)" }} className="mt-1 text-xl sm:text-2xl font-semibold">{value}</p>
+      </div>
     </div>
   );
 }
-

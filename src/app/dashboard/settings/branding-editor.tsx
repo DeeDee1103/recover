@@ -38,6 +38,7 @@ interface BrandingEditorProps {
   logoUrl: string | null;
   primaryColor: string;
   accentColor: string;
+  textColor: string;
   emailFooterText: string;
   currentTone: string;
 }
@@ -47,12 +48,14 @@ export function BrandingEditor({
   logoUrl: initialLogo,
   primaryColor: initialPrimary,
   accentColor: initialAccent,
+  textColor: initialText,
   emailFooterText: initialFooter,
   currentTone: initialTone,
 }: BrandingEditorProps) {
   const [companyName, setCompanyName] = useState(initialName);
   const [primaryColor, setPrimaryColor] = useState(initialPrimary);
   const [accentColor, setAccentColor] = useState(initialAccent);
+  const [textColor, setTextColor] = useState(initialText);
   const [emailFooterText, setEmailFooterText] = useState(initialFooter);
   const [logoUrl, setLogoUrl] = useState(initialLogo);
   const [tone, setTone] = useState(initialTone);
@@ -67,6 +70,7 @@ export function BrandingEditor({
     companyName !== initialName ||
     primaryColor !== initialPrimary ||
     accentColor !== initialAccent ||
+    textColor !== initialText ||
     emailFooterText !== initialFooter ||
     tone !== initialTone;
 
@@ -112,7 +116,7 @@ export function BrandingEditor({
       fetch("/api/settings/branding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company_name: companyName, primary_color: primaryColor, accent_color: accentColor, email_footer_text: emailFooterText }),
+        body: JSON.stringify({ company_name: companyName, primary_color: primaryColor, accent_color: accentColor, text_color: textColor, email_footer_text: emailFooterText }),
       }),
       tone !== initialTone
         ? fetch("/api/settings/tone", {
@@ -204,7 +208,7 @@ export function BrandingEditor({
       </div>
 
       {/* Colors */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">
             Primary color
@@ -224,7 +228,7 @@ export function BrandingEditor({
               className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-sm font-mono dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-400">Email header background</p>
+          <p className="mt-1 text-xs text-zinc-400">Header background</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">
@@ -245,7 +249,28 @@ export function BrandingEditor({
               className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-sm font-mono dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-400">Buttons & brand name</p>
+          <p className="mt-1 text-xs text-zinc-400">Buttons & links</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-1">
+            Text color
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => { setTextColor(e.target.value); setSaved(false); }}
+              className="h-9 w-9 cursor-pointer rounded border border-zinc-300 p-0.5 dark:border-zinc-600"
+            />
+            <input
+              type="text"
+              value={textColor}
+              onChange={(e) => { setTextColor(e.target.value); setSaved(false); }}
+              maxLength={7}
+              className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-sm font-mono dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            />
+          </div>
+          <p className="mt-1 text-xs text-zinc-400">Headings & body</p>
         </div>
       </div>
 
@@ -293,13 +318,13 @@ export function BrandingEditor({
 
             {/* Email body */}
             <div className="px-8 py-8">
-              <p className="mb-3 text-base leading-relaxed text-gray-700">
+              <p style={{ color: textColor }} className="mb-3 text-base leading-relaxed">
                 {sampleEmail.greeting}
               </p>
-              <p className="mb-3 text-base leading-relaxed text-gray-700">
+              <p style={{ color: textColor }} className="mb-3 text-base leading-relaxed">
                 {sampleEmail.body}
               </p>
-              <p className="mb-3 text-base leading-relaxed text-gray-700">
+              <p style={{ color: textColor }} className="mb-3 text-base leading-relaxed">
                 {sampleEmail.closing}
               </p>
 

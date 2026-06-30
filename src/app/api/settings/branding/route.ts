@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { company_name, primary_color, accent_color, email_footer_text } = body;
+  const { company_name, primary_color, accent_color, text_color, email_footer_text } = body;
 
   if (company_name !== undefined && typeof company_name !== "string") {
     return NextResponse.json({ error: "Invalid company_name" }, { status: 400 });
@@ -39,6 +39,9 @@ export async function POST(request: Request) {
   }
   if (accent_color !== undefined && !HEX_COLOR_RE.test(accent_color)) {
     return NextResponse.json({ error: "Invalid accent_color (use #RRGGBB)" }, { status: 400 });
+  }
+  if (text_color !== undefined && !HEX_COLOR_RE.test(text_color)) {
+    return NextResponse.json({ error: "Invalid text_color (use #RRGGBB)" }, { status: 400 });
   }
 
   if (email_footer_text !== undefined && typeof email_footer_text !== "string") {
@@ -55,6 +58,7 @@ export async function POST(request: Request) {
       ...(company_name !== undefined && { company_name }),
       ...(primary_color !== undefined && { primary_color }),
       ...(accent_color !== undefined && { accent_color }),
+      ...(text_color !== undefined && { text_color }),
       ...(email_footer_text !== undefined && { email_footer_text }),
     })
     .eq("auth_user_id", user.id);

@@ -58,7 +58,7 @@ export const reminderSequence = inngest.createFunction(
 
       const { data: merchant } = await supabase
         .from("merchants")
-        .select("company_name, tone, logo_url, primary_color, accent_color, email_footer_text")
+        .select("company_name, tone, logo_url, primary_color, accent_color, text_color, email_footer_text")
         .eq("id", merchant_id)
         .single();
 
@@ -77,6 +77,7 @@ export const reminderSequence = inngest.createFunction(
         branding: {
           primaryColor: merchant?.primary_color || undefined,
           accentColor: merchant?.accent_color || undefined,
+          textColor: merchant?.text_color || undefined,
           logoUrl: merchant?.logo_url,
           footerText: merchant?.email_footer_text,
         } as BrandingOptions,

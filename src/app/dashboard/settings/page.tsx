@@ -9,7 +9,7 @@ export default async function SettingsPage() {
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id, tone, company_name, logo_url, primary_color, accent_color, email_footer_text")
+    .select("id, tone, company_name, logo_url, primary_color, accent_color, text_color, email_footer_text")
     .eq("auth_user_id", user!.id)
     .single();
 
@@ -26,11 +26,11 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 style={{ color: "var(--brand-text)" }} className="text-2xl font-bold">
         Settings
       </h1>
 
-      <section className="mt-8 max-w-lg">
+      <section className="mt-8 max-w-xl">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Branding
         </h2>
@@ -43,13 +43,14 @@ export default async function SettingsPage() {
             logoUrl={merchant?.logo_url || null}
             primaryColor={merchant?.primary_color || "#112E2A"}
             accentColor={merchant?.accent_color || "#C5862F"}
+            textColor={merchant?.text_color || "#000000"}
             emailFooterText={merchant?.email_footer_text || ""}
             currentTone={merchant?.tone || "professional"}
           />
         </div>
       </section>
 
-      <section className="mt-8 max-w-lg">
+      <section className="mt-8 max-w-xl">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Stripe Connection
         </h2>

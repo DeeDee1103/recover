@@ -24,6 +24,7 @@ export function escapeHtml(str: string): string {
 export interface BrandingOptions {
   primaryColor?: string;
   accentColor?: string;
+  textColor?: string;
   logoUrl?: string | null;
   footerText?: string | null;
 }
@@ -34,12 +35,13 @@ export function buildEmailHtml(body: string, updateUrl: string, companyName: str
   const safeUrl = escapeHtml(validatedUrl);
   const primary = branding?.primaryColor || "#112E2A";
   const accent = branding?.accentColor || "#C5862F";
+  const textClr = branding?.textColor || "#000000";
   const logoUrl = branding?.logoUrl;
   const footerText = branding?.footerText;
 
   const bodyHtml = body
     .split("\n")
-    .map((line) => (line.trim() === "" ? "<br/>" : `<p style="margin:0 0 12px;color:#333;font-size:16px;line-height:1.5;">${escapeHtml(line)}</p>`))
+    .map((line) => (line.trim() === "" ? "<br/>" : `<p style="margin:0 0 12px;color:${textClr};font-size:16px;line-height:1.5;">${escapeHtml(line)}</p>`))
     .join("");
 
   const logoHtml = logoUrl

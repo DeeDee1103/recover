@@ -17,6 +17,7 @@ export type Database = {
           logo_url: string | null;
           primary_color: string | null;
           accent_color: string | null;
+          text_color: string | null;
           email_footer_text: string | null;
           created_at: string;
           updated_at: string;
@@ -29,6 +30,7 @@ export type Database = {
           logo_url?: string | null;
           primary_color?: string | null;
           accent_color?: string | null;
+          text_color?: string | null;
           email_footer_text?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -41,6 +43,7 @@ export type Database = {
           logo_url?: string | null;
           primary_color?: string | null;
           accent_color?: string | null;
+          text_color?: string | null;
           email_footer_text?: string | null;
           created_at?: string;
           updated_at?: string;

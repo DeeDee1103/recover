@@ -15,9 +15,15 @@ export default async function DashboardLayout({
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("company_name, logo_url")
+    .select("company_name, logo_url, primary_color, accent_color, text_color")
     .eq("auth_user_id", user.id)
     .single();
+
+  const brandVars = {
+    "--brand-primary": merchant?.primary_color || "#112E2A",
+    "--brand-accent": merchant?.accent_color || "#C5862F",
+    "--brand-text": merchant?.text_color || "#000000",
+  } as React.CSSProperties;
 
   return (
     <div className="flex min-h-full">
@@ -28,7 +34,7 @@ export default async function DashboardLayout({
       >
         <SignOutButton />
       </Sidebar>
-      <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8">{children}</main>
+      <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8" style={brandVars}>{children}</main>
     </div>
   );
 }

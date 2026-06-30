@@ -19,7 +19,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id")
+    .select("id, accent_color")
     .eq("auth_user_id", user!.id)
     .single();
 
@@ -69,13 +69,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     lost: lostCt || 0,
   };
 
+  const accentColor = merchant.accent_color || "#C5862F";
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 style={{ color: "var(--brand-text)" }} className="text-2xl font-bold">
         Failed Payments
       </h1>
 
-      <PaymentsFilter current={statusFilter || "all"} counts={counts} />
+      <PaymentsFilter current={statusFilter || "all"} counts={counts} accentColor={accentColor} />
 
       {(!payments || payments.length === 0) ? (
         <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
@@ -86,13 +88,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           <div className="mt-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-700">
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Customer</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Amount</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Status</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Reason</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Failed</th>
-                  <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Invoice</th>
+                <tr style={{ borderColor: "var(--brand-primary)" }} className="border-b-2">
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Customer</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Amount</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Status</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Reason</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Failed</th>
+                  <th style={{ color: "var(--brand-text)" }} className="pb-2 text-left font-medium">Invoice</th>
                 </tr>
               </thead>
               <tbody>
