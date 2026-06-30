@@ -37,6 +37,7 @@ export async function generateReminderCopy(ctx: CopyContext): Promise<GeneratedC
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 500,
+    system: "You are a payment reminder email copywriter. You output valid JSON only — no markdown, no code fences, no extra text. Never include URLs or placeholder brackets.",
     messages: [
       {
         role: "user",
@@ -71,11 +72,13 @@ Respond in exactly this JSON format:
     throw new Error("AI returned empty response");
   }
 
+  const cleaned = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(cleaned);
   } catch {
-    throw new Error(`AI returned invalid JSON: ${text.slice(0, 100)}`);
+    throw new Error(`AI returned invalid JSON: ${cleaned.slice(0, 100)}`);
   }
 
   if (!parsed.subject || !parsed.body) {

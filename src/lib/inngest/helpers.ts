@@ -1,9 +1,4 @@
-export function formatAmount(amountCents: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(amountCents / 100);
-}
+export { formatCents as formatAmount } from "@/lib/format";
 
 export function buildUpdateUrl(stripeInvoiceId?: string | null): string {
   if (stripeInvoiceId) {
@@ -28,6 +23,8 @@ export function escapeHtml(str: string): string {
 
 export function buildEmailHtml(body: string, updateUrl: string, companyName: string): string {
   const safeCompany = escapeHtml(companyName);
+  const validatedUrl = /^https?:\/\//.test(updateUrl) ? updateUrl : "";
+  const safeUrl = escapeHtml(validatedUrl);
   const bodyHtml = body
     .split("\n")
     .map((line) => (line.trim() === "" ? "<br/>" : `<p style="margin:0 0 12px;color:#333;font-size:16px;line-height:1.5;">${escapeHtml(line)}</p>`))
@@ -45,7 +42,7 @@ export function buildEmailHtml(body: string, updateUrl: string, companyName: str
     <div style="padding:32px;">
       ${bodyHtml}
       <div style="margin:28px 0;">
-        <a href="${updateUrl}" style="display:inline-block;background:#C5862F;color:#fff;font-weight:700;font-size:16px;padding:14px 28px;border-radius:8px;text-decoration:none;">Update payment method</a>
+        <a href="${safeUrl}" style="display:inline-block;background:#C5862F;color:#fff;font-weight:700;font-size:16px;padding:14px 28px;border-radius:8px;text-decoration:none;">Update payment method</a>
       </div>
       <p style="margin:24px 0 0;font-size:13px;color:#888;">
         If you've already updated your payment method, please disregard this email.

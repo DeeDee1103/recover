@@ -39,7 +39,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     .range(offset, offset + PAGE_SIZE - 1);
 
   if (statusFilter && statusFilter !== "all" && VALID_STATUSES.includes(statusFilter)) {
-    query = query.eq("status", statusFilter);
+    query = query.eq("status", statusFilter as "open" | "recovering" | "recovered" | "lost");
   }
 
   const { data: payments, count: totalCount } = await query;

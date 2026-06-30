@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe/client";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -23,6 +24,11 @@ export async function GET(request: Request) {
 
   if (!user) {
     return NextResponse.redirect(`${origin}/login`);
+  }
+
+  const { success: allowed } = rateLimit(`connect-callback:${user.id}`, 10, 60_000);
+  if (!allowed) {
+    return NextResponse.redirect(`${origin}/dashboard/settings?error=rate_limited`);
   }
 
   let stateData: { user_id: string; nonce?: string };

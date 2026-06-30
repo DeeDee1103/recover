@@ -35,18 +35,18 @@ export default async function DashboardPage() {
     supabase.from("failed_payments").select("*", { count: "exact", head: true }).eq("merchant_id", merchant.id).in("status", ["open", "recovering"]),
   ]);
 
-  const { data: recoveries } = await supabase
-    .from("recoveries")
-    .select("amount_recovered")
-    .in(
-      "failed_payment_id",
-      (await supabase.from("failed_payments").select("id").eq("merchant_id", merchant.id)).data?.map((p) => p.id) || []
-    );
+  const { data: paymentsWithRecoveries } = await supabase
+    .from("failed_payments")
+    .select("recoveries(amount_recovered)")
+    .eq("merchant_id", merchant.id);
 
   const total = totalFailed || 0;
   const recovered = recoveredCount || 0;
   const open = openCount || 0;
-  const totalRecovered = (recoveries || []).reduce((sum, r) => sum + r.amount_recovered, 0);
+  const totalRecovered = (paymentsWithRecoveries || []).reduce(
+    (sum, p) => sum + ((p.recoveries as unknown as { amount_recovered: number } | null)?.amount_recovered || 0),
+    0
+  );
   const recoveryRate = total > 0 ? Math.round((recovered / total) * 100) : 0;
 
   const { data: recentPayments } = await supabase

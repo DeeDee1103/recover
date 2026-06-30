@@ -131,7 +131,7 @@ describe("buildEmailHtml", () => {
   });
 
   it("escapes HTML in body lines", () => {
-    const html = buildEmailHtml("<script>alert(1)</script>", "#", "Test");
+    const html = buildEmailHtml("<script>alert(1)</script>", "https://example.com", "Test");
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("&lt;script&gt;");
   });
@@ -152,5 +152,17 @@ describe("buildEmailHtml", () => {
     const html = buildEmailHtml("body", "https://pay.me", "Co");
     expect(html).toContain('href="https://pay.me"');
     expect(html).toContain("Update payment method");
+  });
+
+  it("escapes updateUrl to prevent attribute injection", () => {
+    const html = buildEmailHtml("body", 'https://evil.com" onclick="alert(1)', "Co");
+    expect(html).toContain("&quot;");
+    expect(html).not.toContain('onclick="alert');
+  });
+
+  it("rejects non-http URLs", () => {
+    const html = buildEmailHtml("body", "javascript:alert(1)", "Co");
+    expect(html).not.toContain("javascript:");
+    expect(html).toContain('href=""');
   });
 });

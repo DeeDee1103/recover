@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
   const supabase = await createClient();
@@ -8,6 +9,11 @@ export async function GET() {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { success: allowed } = rateLimit(`connect-start:${user.id}`, 10, 60_000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;

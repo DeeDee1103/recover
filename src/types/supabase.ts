@@ -1,3 +1,10 @@
+export type PaymentStatus = "open" | "recovering" | "recovered" | "lost";
+export type ConnectionStatus = "active" | "revoked" | "expired";
+export type ConnectionMethod = "connect" | "restricted_key";
+export type ReminderStatus = "pending" | "sent" | "failed" | "cancelled";
+export type ReminderChannel = "email" | "sms";
+export type MerchantTone = "professional" | "friendly" | "urgent" | "empathetic";
+
 export type Database = {
   public: {
     Tables: {
@@ -6,7 +13,7 @@ export type Database = {
           id: string;
           auth_user_id: string;
           company_name: string | null;
-          tone: string;
+          tone: MerchantTone;
           created_at: string;
           updated_at: string;
         };
@@ -14,7 +21,7 @@ export type Database = {
           id?: string;
           auth_user_id: string;
           company_name?: string | null;
-          tone?: string;
+          tone?: MerchantTone;
           created_at?: string;
           updated_at?: string;
         };
@@ -22,7 +29,7 @@ export type Database = {
           id?: string;
           auth_user_id?: string;
           company_name?: string | null;
-          tone?: string;
+          tone?: MerchantTone;
           created_at?: string;
           updated_at?: string;
         };
@@ -33,11 +40,11 @@ export type Database = {
           id: string;
           merchant_id: string;
           stripe_account_id: string;
-          connection_method: string;
+          connection_method: ConnectionMethod;
           access_token_encrypted: string | null;
           refresh_token_encrypted: string | null;
           restricted_key_encrypted: string | null;
-          status: string;
+          status: ConnectionStatus;
           created_at: string;
           updated_at: string;
         };
@@ -45,11 +52,11 @@ export type Database = {
           id?: string;
           merchant_id: string;
           stripe_account_id: string;
-          connection_method: string;
+          connection_method: ConnectionMethod;
           access_token_encrypted?: string | null;
           refresh_token_encrypted?: string | null;
           restricted_key_encrypted?: string | null;
-          status?: string;
+          status?: ConnectionStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -57,11 +64,11 @@ export type Database = {
           id?: string;
           merchant_id?: string;
           stripe_account_id?: string;
-          connection_method?: string;
+          connection_method?: ConnectionMethod;
           access_token_encrypted?: string | null;
           refresh_token_encrypted?: string | null;
           restricted_key_encrypted?: string | null;
-          status?: string;
+          status?: ConnectionStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -124,7 +131,7 @@ export type Database = {
           currency: string;
           failure_reason: string | null;
           failed_at: string;
-          status: string;
+          status: PaymentStatus;
           created_at: string;
           updated_at: string;
         };
@@ -138,7 +145,7 @@ export type Database = {
           currency: string;
           failure_reason?: string | null;
           failed_at?: string;
-          status: string;
+          status: PaymentStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -152,7 +159,7 @@ export type Database = {
           currency?: string;
           failure_reason?: string | null;
           failed_at?: string;
-          status?: string;
+          status?: PaymentStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -216,7 +223,7 @@ export type Database = {
           offset_hours: number;
           subject: string;
           body_template: string;
-          channel: string;
+          channel: ReminderChannel;
           created_at: string;
           updated_at: string;
         };
@@ -227,7 +234,7 @@ export type Database = {
           offset_hours: number;
           subject: string;
           body_template: string;
-          channel: string;
+          channel: ReminderChannel;
           created_at?: string;
           updated_at?: string;
         };
@@ -238,7 +245,7 @@ export type Database = {
           offset_hours?: number;
           subject?: string;
           body_template?: string;
-          channel?: string;
+          channel?: ReminderChannel;
           created_at?: string;
           updated_at?: string;
         };
@@ -257,10 +264,10 @@ export type Database = {
           id: string;
           failed_payment_id: string;
           step_order: number;
-          channel: string;
+          channel: ReminderChannel;
           scheduled_at: string;
           sent_at: string | null;
-          status: string;
+          status: ReminderStatus;
           provider_message_id: string | null;
           created_at: string;
           updated_at: string;
@@ -269,10 +276,10 @@ export type Database = {
           id?: string;
           failed_payment_id: string;
           step_order: number;
-          channel: string;
+          channel: ReminderChannel;
           scheduled_at?: string;
           sent_at?: string | null;
-          status: string;
+          status: ReminderStatus;
           provider_message_id?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -281,10 +288,10 @@ export type Database = {
           id?: string;
           failed_payment_id?: string;
           step_order?: number;
-          channel?: string;
+          channel?: ReminderChannel;
           scheduled_at?: string;
           sent_at?: string | null;
-          status?: string;
+          status?: ReminderStatus;
           provider_message_id?: string | null;
           created_at?: string;
           updated_at?: string;

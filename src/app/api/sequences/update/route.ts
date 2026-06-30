@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
+
+const MAX_STEPS = 20;
+const MAX_SUBJECT_LENGTH = 200;
+const MAX_BODY_LENGTH = 5000;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -7,6 +12,11 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { success: allowed } = rateLimit(`sequences:${user.id}`, 20, 60_000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   let body;
@@ -20,6 +30,10 @@ export async function POST(request: Request) {
 
   if (!sequence_id || !Array.isArray(steps)) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  if (steps.length > MAX_STEPS) {
+    return NextResponse.json({ error: `Maximum ${MAX_STEPS} steps allowed` }, { status: 400 });
   }
 
   const { data: merchant } = await supabase
@@ -52,11 +66,19 @@ export async function POST(request: Request) {
       validationErrors.push(`Invalid step data at index ${i}`);
       continue;
     }
+    if (step.subject.length > MAX_SUBJECT_LENGTH) {
+      validationErrors.push(`Subject at index ${i} exceeds ${MAX_SUBJECT_LENGTH} characters`);
+      continue;
+    }
+    if (step.body_template.length > MAX_BODY_LENGTH) {
+      validationErrors.push(`Body template at index ${i} exceeds ${MAX_BODY_LENGTH} characters`);
+      continue;
+    }
     validSteps.push({
       id: step.id,
       offset_hours: Math.max(0, Math.floor(step.offset_hours)),
-      subject: step.subject,
-      body_template: step.body_template,
+      subject: step.subject.slice(0, MAX_SUBJECT_LENGTH),
+      body_template: step.body_template.slice(0, MAX_BODY_LENGTH),
     });
   }
 
