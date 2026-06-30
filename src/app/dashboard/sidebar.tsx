@@ -4,7 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function Sidebar({ email, children }: { email: string; children: React.ReactNode }) {
+interface SidebarProps {
+  email: string;
+  logoUrl: string | null;
+  companyName: string;
+  children: React.ReactNode;
+}
+
+export function Sidebar({ email, logoUrl, companyName, children }: SidebarProps) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
@@ -35,8 +42,9 @@ export function Sidebar({ email, children }: { email: string; children: React.Re
             <path d="M3 5h14M3 10h14M3 15h14" />
           </svg>
         </button>
-        <Link href="/dashboard" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-          Recover
+        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          {logoUrl && <img src={logoUrl} alt="" className="h-6 w-6 rounded object-contain" />}
+          {companyName}
         </Link>
       </div>
 
@@ -60,8 +68,9 @@ export function Sidebar({ email, children }: { email: string; children: React.Re
       >
         {/* Close button (mobile) */}
         <div className="mb-6 flex items-center justify-between md:hidden">
-          <Link href="/dashboard" className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-            Recover
+          <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">
+            {logoUrl && <img src={logoUrl} alt="" className="h-7 w-7 rounded object-contain" />}
+            {companyName}
           </Link>
           <button
             onClick={() => setOpen(false)}
@@ -77,8 +86,14 @@ export function Sidebar({ email, children }: { email: string; children: React.Re
         {/* Logo + collapse toggle (desktop) */}
         <div className="mb-8 hidden items-center justify-between md:flex">
           {!collapsed && (
-            <Link href="/dashboard" className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-              Recover
+            <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">
+              {logoUrl && <img src={logoUrl} alt="" className="h-7 w-7 rounded object-contain" />}
+              {companyName}
+            </Link>
+          )}
+          {collapsed && logoUrl && (
+            <Link href="/dashboard">
+              <img src={logoUrl} alt="" className="h-7 w-7 rounded object-contain" />
             </Link>
           )}
           <button

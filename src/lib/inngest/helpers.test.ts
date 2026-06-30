@@ -165,4 +165,51 @@ describe("buildEmailHtml", () => {
     expect(html).not.toContain("javascript:");
     expect(html).toContain('href=""');
   });
+
+  it("uses custom branding colors", () => {
+    const html = buildEmailHtml("body", "https://pay.me", "Co", {
+      primaryColor: "#FF0000",
+      accentColor: "#00FF00",
+    });
+    expect(html).toContain("background:#FF0000");
+    expect(html).toContain("color:#00FF00");
+    expect(html).toContain("background:#00FF00");
+  });
+
+  it("includes logo when provided", () => {
+    const html = buildEmailHtml("body", "https://pay.me", "Co", {
+      logoUrl: "https://example.com/logo.png",
+    });
+    expect(html).toContain('<img src="https://example.com/logo.png"');
+  });
+
+  it("escapes logo URL", () => {
+    const html = buildEmailHtml("body", "https://pay.me", "Co", {
+      logoUrl: 'https://evil.com" onload="alert(1)',
+    });
+    expect(html).not.toContain('onload="alert');
+    expect(html).toContain("&quot;");
+  });
+
+  it("includes footer text when provided", () => {
+    const html = buildEmailHtml("body", "https://pay.me", "Co", {
+      footerText: "123 Main St, City",
+    });
+    expect(html).toContain("123 Main St, City");
+  });
+
+  it("escapes footer text", () => {
+    const html = buildEmailHtml("body", "https://pay.me", "Co", {
+      footerText: "<script>alert(1)</script>",
+    });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("uses defaults when no branding provided", () => {
+    const html = buildEmailHtml("body", "https://pay.me", "Co");
+    expect(html).toContain("#112E2A");
+    expect(html).toContain("#C5862F");
+    expect(html).not.toContain("<img");
+  });
 });

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ConnectButton } from "./connect-button";
 import { RestrictedKeyForm } from "./restricted-key-form";
 import { ToneSelector } from "./tone-selector";
+import { BrandingEditor } from "./branding-editor";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -9,7 +10,7 @@ export default async function SettingsPage() {
 
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id, tone")
+    .select("id, tone, company_name, logo_url, primary_color, accent_color, email_footer_text")
     .eq("auth_user_id", user!.id)
     .single();
 
@@ -29,6 +30,36 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
         Settings
       </h1>
+
+      <section className="mt-8 max-w-lg">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          Branding
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Customize your logo, colors, and company name. These appear on recovery emails sent to your customers.
+        </p>
+        <div className="mt-4">
+          <BrandingEditor
+            companyName={merchant?.company_name || ""}
+            logoUrl={merchant?.logo_url || null}
+            primaryColor={merchant?.primary_color || "#112E2A"}
+            accentColor={merchant?.accent_color || "#C5862F"}
+            emailFooterText={merchant?.email_footer_text || ""}
+          />
+        </div>
+      </section>
+
+      <section className="mt-8 max-w-lg">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          AI Email Tone
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Choose the tone for AI-generated reminder emails. The AI personalizes each email based on the customer and payment context.
+        </p>
+        <div className="mt-4">
+          <ToneSelector currentTone={merchant?.tone || "professional"} />
+        </div>
+      </section>
 
       <section className="mt-8 max-w-lg">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
@@ -81,18 +112,6 @@ export default async function SettingsPage() {
             </div>
           </div>
         )}
-      </section>
-
-      <section className="mt-8 max-w-lg">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          AI Email Tone
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Choose the tone for AI-generated reminder emails. The AI personalizes each email based on the customer and payment context.
-        </p>
-        <div className="mt-4">
-          <ToneSelector currentTone={merchant?.tone || "professional"} />
-        </div>
       </section>
     </div>
   );

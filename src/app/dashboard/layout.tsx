@@ -13,9 +13,19 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
+  const { data: merchant } = await supabase
+    .from("merchants")
+    .select("company_name, logo_url")
+    .eq("auth_user_id", user.id)
+    .single();
+
   return (
     <div className="flex min-h-full">
-      <Sidebar email={user.email || ""}>
+      <Sidebar
+        email={user.email || ""}
+        logoUrl={merchant?.logo_url || null}
+        companyName={merchant?.company_name || "Recover"}
+      >
         <SignOutButton />
       </Sidebar>
       <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8">{children}</main>

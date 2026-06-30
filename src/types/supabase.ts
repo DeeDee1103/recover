@@ -14,6 +14,10 @@ export type Database = {
           auth_user_id: string;
           company_name: string | null;
           tone: MerchantTone;
+          logo_url: string | null;
+          primary_color: string | null;
+          accent_color: string | null;
+          email_footer_text: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -22,6 +26,10 @@ export type Database = {
           auth_user_id: string;
           company_name?: string | null;
           tone?: MerchantTone;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          accent_color?: string | null;
+          email_footer_text?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -30,6 +38,10 @@ export type Database = {
           auth_user_id?: string;
           company_name?: string | null;
           tone?: MerchantTone;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          accent_color?: string | null;
+          email_footer_text?: string | null;
           created_at?: string;
           updated_at?: string;
         };

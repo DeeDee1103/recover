@@ -2,7 +2,7 @@ import { inngest } from "./client";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getResend } from "@/lib/resend/client";
 import { generateReminderCopy } from "@/lib/anthropic/generate-copy";
-import { formatAmount, buildUpdateUrl, renderTemplate, buildEmailHtml } from "./helpers";
+import { formatAmount, buildUpdateUrl, renderTemplate, buildEmailHtml, type BrandingOptions } from "./helpers";
 
 export const reminderSequence = inngest.createFunction(
   {
@@ -58,7 +58,7 @@ export const reminderSequence = inngest.createFunction(
 
       const { data: merchant } = await supabase
         .from("merchants")
-        .select("company_name, tone")
+        .select("company_name, tone, logo_url, primary_color, accent_color, email_footer_text")
         .eq("id", merchant_id)
         .single();
 
@@ -74,6 +74,12 @@ export const reminderSequence = inngest.createFunction(
         customer: payment.end_customers,
         merchantName: merchant?.company_name || "Our Team",
         tone: merchant?.tone || "professional",
+        branding: {
+          primaryColor: merchant?.primary_color || undefined,
+          accentColor: merchant?.accent_color || undefined,
+          logoUrl: merchant?.logo_url,
+          footerText: merchant?.email_footer_text,
+        } as BrandingOptions,
         stripeAccountId: connection?.stripe_account_id,
         stripeInvoiceId: payment.stripe_invoice_id,
       };
@@ -175,7 +181,7 @@ export const reminderSequence = inngest.createFunction(
             from: `${context.merchantName} <recover@updates.recover-app.com>`,
             to: [customerEmail],
             subject,
-            html: buildEmailHtml(body, updateUrl, context.merchantName),
+            html: buildEmailHtml(body, updateUrl, context.merchantName, context.branding),
           });
 
           await supabase.from("reminders").insert({
