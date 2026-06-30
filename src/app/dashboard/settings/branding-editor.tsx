@@ -199,36 +199,67 @@ export function BrandingEditor({
         </div>
       </div>
 
-      {/* Email preview */}
+      {/* Full email preview */}
       <div>
         <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-200 mb-2">
-          Preview
+          Email Preview
         </label>
-        <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <div style={{ background: primaryColor }} className="flex items-center gap-3 px-6 py-4">
-            {logoUrl && (
-              <img src={logoUrl} alt="" className="h-8 w-8 rounded object-contain" />
-            )}
-            <span style={{ color: accentColor }} className="text-lg font-bold">
-              {companyName || "Your Company"}
-            </span>
-          </div>
-          <div className="bg-white px-6 py-4 dark:bg-zinc-900">
-            <p className="text-sm text-zinc-500">Your email content appears here...</p>
-            <div className="mt-3">
-              <span
-                style={{ background: accentColor }}
-                className="inline-block rounded-lg px-5 py-2.5 text-sm font-bold text-white"
-              >
-                Update payment method
-              </span>
+        <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-4 sm:p-6 dark:border-zinc-700 dark:bg-zinc-800">
+          <div className="mx-auto max-w-[560px] overflow-hidden rounded-xl bg-white shadow-md">
+            {/* Email header */}
+            <div style={{ background: primaryColor }} className="px-8 py-6">
+              <div className="flex items-center gap-3">
+                {logoUrl && (
+                  <img src={logoUrl} alt="" className="h-8 w-auto rounded object-contain" />
+                )}
+                <span style={{ color: accentColor }} className="text-xl font-bold">
+                  {companyName || "Your Company"}
+                </span>
+              </div>
             </div>
-            {emailFooterText && (
-              <p className="mt-4 text-xs text-zinc-400 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                {emailFooterText}
+
+            {/* Email body */}
+            <div className="px-8 py-8">
+              <p className="mb-3 text-base leading-relaxed text-gray-700">
+                Hi Sarah,
               </p>
-            )}
+              <p className="mb-3 text-base leading-relaxed text-gray-700">
+                We noticed your recent payment of <strong>$49.99 USD</strong> didn&apos;t go through.
+                This can happen for a number of reasons — expired card, insufficient funds,
+                or a temporary bank hold.
+              </p>
+              <p className="mb-3 text-base leading-relaxed text-gray-700">
+                You can update your payment method using the button below. It only takes a moment.
+              </p>
+
+              {/* CTA button */}
+              <div className="my-7">
+                <span
+                  style={{ background: accentColor }}
+                  className="inline-block cursor-pointer rounded-lg px-7 py-3.5 text-base font-bold text-white"
+                >
+                  Update payment method
+                </span>
+              </div>
+
+              <p className="text-sm text-gray-400">
+                If you&apos;ve already updated your payment method, please disregard this email.
+              </p>
+
+              {/* Footer */}
+              {emailFooterText && (
+                <div className="mt-4 border-t border-gray-100 pt-3">
+                  <p className="text-xs leading-relaxed text-gray-400">
+                    {emailFooterText}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+
+          <p className="mt-3 text-center text-xs text-zinc-400 dark:text-zinc-500">
+            This is how your recovery emails will look to customers
+          </p>
         </div>
       </div>
 
