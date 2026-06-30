@@ -77,7 +77,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
         <MetricCard label="Recovered" value={formatCents(totalRecovered)} />
         <MetricCard label="Recovery rate" value={`${recoveryRate}%`} />
         <MetricCard label="Open failures" value={String(open)} />
@@ -107,8 +107,8 @@ export default async function DashboardPage() {
             No failed payments yet. They&apos;ll appear here once your Stripe webhook is active.
           </p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="mt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-700">
                   <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Customer</th>
@@ -145,9 +145,9 @@ export default async function DashboardPage() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{value}</p>
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
+      <p className="mt-1 text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{value}</p>
     </div>
   );
 }

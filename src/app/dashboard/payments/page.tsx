@@ -83,8 +83,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         </p>
       ) : (
         <>
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="mt-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-700">
                   <th className="pb-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Customer</th>
